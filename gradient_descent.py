@@ -9,17 +9,18 @@ def stochastic_gradient_descent_constant(dots: np.ndarray, batch_size: int, star
 
     dots_i = list(range(len(dots)))
     prev_args = start_value
-    for _ in range(20):
+    for epoch in range(50):
         shuffle(dots_i)
-        for epoch in range((len(dots) + batch_size - 1) // batch_size):
-            minibatch_i = dots_i[epoch * batch_size: (epoch + 1) * batch_size]
+        for i in range((len(dots) + batch_size - 1) // batch_size):
+            minibatch_i = dots_i[i * batch_size: (i + 1) * batch_size]
             minibatch_dots = [dots[i] for i in minibatch_i]
             # need gradient of sum((dot[1] - (prev_args[0] * dot[0] + prev_args[1])) ** 2 for dot in minibatch)
-            grad = np.array([0, 0])
+            grad = np.array([0.0, 0.0])
             for dot in minibatch_dots:
-                grad[0] += 2 * (dot[1] - (prev_args[0] * dot[0] + prev_args[1])) * (-dot[0])
-                grad[1] += 2 * (dot[1] - (prev_args[0] * dot[0] + prev_args[1]))
+                grad[0] += 2 * (dot[1] - (prev_args[0] * dot[0] + prev_args[1])) * (-prev_args[0])
+                grad[1] += 2 * (dot[1] - (prev_args[0] * dot[0] + prev_args[1])) * -1
             new_args = prev_args - learning_rate * grad
             way.append(new_args)
             prev_args = new_args
+            break
     return np.array(way)

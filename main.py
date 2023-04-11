@@ -6,12 +6,16 @@ from gradient_descent import *
 
 def main():
     dots = np.array([
-        [0, 1],
-        [1, 2],
-        [2, 1],
-        [3, 2]
+        [0, 1.1],
+        [1, 1],
+        [2, 1.1],
+        [3, 1],
+        [4, 1.1],
+        [5, 1],
+        [6, 1.1],
+        [7, 1]
     ])
-    way = stochastic_gradient_descent_constant(dots, 4, np.array([0, 0]), 0.03)
+    way = stochastic_gradient_descent_constant(dots, 4, np.array([0.0, 3.0]), 0.01)
     print(way)
     ans = way[-1]
     plt.plot(dots[:, 0], dots[:, 1], 'o')
