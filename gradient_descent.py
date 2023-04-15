@@ -1,8 +1,10 @@
 import numpy as np
 from random import shuffle
 from typing import Callable
+import func_utils
 import math
 
+CONVERGENCE_EPS = 10 ** -20
 EPS = 10 ** -8
 
 
@@ -43,8 +45,8 @@ def stochastic_gradient_descent(dots: np.ndarray, batch_size: int, start_value: 
             grad = np.array([0.0, 0.0])
             #     sum( (dot[1] - (func_arg[0] * dot[0] + func_arg[1])) ** 2 for dot in dots)
             for dot in minibatch_dots:
-                grad[0] += 2 * dot[0] * (dot[0] * prev_args[0] - dot[1] + prev_args[1])
-                grad[1] += 2 * (prev_args[1] - dot[1] + prev_args[0] * dot[0])
+                grad[0] += 2 * (prev_args[0] - dot[1] + prev_args[1] * dot[0])
+                grad[1] += 2 * dot[0] * (dot[0] * prev_args[1] - dot[1] + prev_args[0])
             new_args = prev_args - learning_rate * grad
             way.append(new_args)
             prev_args = new_args
@@ -67,8 +69,8 @@ def running_average_stochastic_gradient_descent_constant(dots: np.ndarray, batch
             minibatch_dots = [dots[i] for i in minibatch_i]
             grad = np.array([0.0, 0.0])
             for dot in minibatch_dots:
-                grad[0] += 2 * dot[0] * (dot[0] * prev_args[0] - dot[1] + prev_args[1])
-                grad[1] += 2 * (prev_args[1] - dot[1] + prev_args[0] * dot[0])
+                grad[0] += 2 * (prev_args[0] - dot[1] + prev_args[1] * dot[0])
+                grad[1] += 2 * dot[0] * (dot[0] * prev_args[1] - dot[1] + prev_args[0])
 
             v = gamma * prev_v + (1 - gamma) * grad
 
@@ -97,8 +99,8 @@ def nesterov_stochastic_gradient_descent_constant(dots: np.ndarray, batch_size: 
             grad = np.array([0.0, 0.0])
             grad_arg = prev_args - learning_rate * gamma * prev_v
             for dot in minibatch_dots:
-                grad[0] += 2 * dot[0] * (dot[0] * grad_arg[0] - dot[1] + grad_arg[1])
-                grad[1] += 2 * (grad_arg[1] - dot[1] + grad_arg[0] * dot[0])
+                grad[0] += 2 * (grad_arg[0] - dot[1] + grad_arg[1] * dot[0])
+                grad[1] += 2 * dot[0] * (dot[0] * grad_arg[1] - dot[1] + grad_arg[0])
 
             v = gamma * prev_v + (1 - gamma) * grad
 
@@ -125,8 +127,8 @@ def adagrad_stochastic_gradient_descent_constant(dots: np.ndarray, batch_size: i
             minibatch_dots = [dots[i] for i in minibatch_i]
             grad = np.array([0.0, 0.0])
             for dot in minibatch_dots:
-                grad[0] += 2 * dot[0] * (dot[0] * prev_args[0] - dot[1] + prev_args[1])
-                grad[1] += 2 * (prev_args[1] - dot[1] + prev_args[0] * dot[0])
+                grad[0] += 2 * (prev_args[0] - dot[1] + prev_args[1] * dot[0])
+                grad[1] += 2 * dot[0] * (dot[0] * prev_args[1] - dot[1] + prev_args[0])
 
             G += grad ** 2
 
@@ -152,8 +154,8 @@ def rmsprop_stochastic_gradient_descent_constant(dots: np.ndarray, batch_size: i
             minibatch_dots = [dots[i] for i in minibatch_i]
             grad = np.array([0.0, 0.0])
             for dot in minibatch_dots:
-                grad[0] += 2 * dot[0] * (dot[0] * prev_args[0] - dot[1] + prev_args[1])
-                grad[1] += 2 * (prev_args[1] - dot[1] + prev_args[0] * dot[0])
+                grad[0] += 2 * (prev_args[0] - dot[1] + prev_args[1] * dot[0])
+                grad[1] += 2 * dot[0] * (dot[0] * prev_args[1] - dot[1] + prev_args[0])
 
             s = beta * prev_s + (1 - beta) * (grad ** 2)
 
@@ -183,8 +185,8 @@ def adam_stochastic_gradient_descent_constant(dots: np.ndarray, batch_size: int,
             minibatch_dots = [dots[i] for i in minibatch_i]
             grad = np.array([0.0, 0.0])
             for dot in minibatch_dots:
-                grad[0] += 2 * dot[0] * (dot[0] * prev_args[0] - dot[1] + prev_args[1])
-                grad[1] += 2 * (prev_args[1] - dot[1] + prev_args[0] * dot[0])
+                grad[0] += 2 * (prev_args[0] - dot[1] + prev_args[1] * dot[0])
+                grad[1] += 2 * dot[0] * (dot[0] * prev_args[1] - dot[1] + prev_args[0])
 
             v = beta1 * prev_v + (1 - beta1) * grad
             s = beta2 * prev_s + (1 - beta2) * (grad ** 2)
@@ -198,4 +200,42 @@ def adam_stochastic_gradient_descent_constant(dots: np.ndarray, batch_size: int,
             prev_s = s
             beta1_powered *= beta1
             beta2_powered *= beta2
+    return np.array(way)
+
+
+def polynomial_stochastic_gradient_descent(dots: np.ndarray, batch_size: int, start_value: np.ndarray,
+                                           learning_rate: float,
+                                           l1: float = 0, l2: float = 0, elastic: float = 0):
+    way = [start_value]
+    n = len(start_value)
+    dots_i = list(range(len(dots)))
+    prev_args = start_value
+
+    converges = False
+    for epoch in range(2000):
+        if converges:
+            break
+        shuffle(dots_i)
+        for i in range((len(dots) + batch_size - 1) // batch_size):
+            minibatch_i = dots_i[i * batch_size: (i + 1) * batch_size]
+            minibatch_dots = [dots[i] for i in minibatch_i]
+            grad = np.array([0.0] * n)
+            grad_func = func_utils.grad_func(prev_args)
+            for dot in minibatch_dots:
+                grad += grad_func(dot[0], dot[1])
+
+            l1_regr = l1 * np.array([1 if arg > 0 else -1 for arg in prev_args])
+            l2_regr = l2 * 2 * prev_args
+            if abs(elastic) > EPS:
+                grad += elastic * l1_regr + (1 - elastic) / 2 * l2_regr
+            else:
+                grad += l1_regr + l2_regr
+
+            new_args = prev_args - learning_rate * grad
+            if all(abs(new_args - prev_args) < CONVERGENCE_EPS):
+                converges = True
+                break
+            way.append(new_args)
+            prev_args = new_args
+
     return np.array(way)
