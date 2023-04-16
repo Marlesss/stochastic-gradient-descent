@@ -17,7 +17,7 @@ def func(curve: Callable[[float], float]):
     return apply
 
 
-def grad_func(args: np.ndarray):
+def grad_func(args: np.ndarray, learning_rate: float):
     def apply(x: float, y: float) -> np.ndarray:
         n = len(args)
         this_curve = curve(args)
