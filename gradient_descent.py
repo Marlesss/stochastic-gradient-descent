@@ -4,7 +4,7 @@ from typing import Callable
 import func_utils
 import math
 
-CONVERGENCE_EPS = 10 ** -20
+CONVERGENCE_EPS = 10 ** -30
 EPS = 10 ** -8
 
 
@@ -62,9 +62,9 @@ def stochastic_factory(batch_size: int, init_learning_rate: float,
                     grad += grad_func(dot[0], dot[1])
 
                 new_args = new_args_func(prev_args, learning_rate, grad)
-                if all(abs(new_args - prev_args) < CONVERGENCE_EPS):
-                    converged = True
-                    break
+                # if all(abs(new_args - prev_args) < CONVERGENCE_EPS):
+                #     converged = True
+                #     break
                 way.append(new_args)
                 prev_args = new_args
         return converged, np.array(way)
@@ -72,7 +72,7 @@ def stochastic_factory(batch_size: int, init_learning_rate: float,
     return apply
 
 
-def running_average(gamma: float) -> Callable[[np.ndarray, float, np.ndarray], np.ndarray]:
+def momentum(gamma: float) -> Callable[[np.ndarray, float, np.ndarray], np.ndarray]:
     prev_v = 0
 
     def apply(prev_args: np.ndarray, learning_rate: float, grad: np.ndarray) -> np.ndarray:
@@ -182,14 +182,14 @@ def elastic(new_args_func: Callable[[np.ndarray, float, np.ndarray], np.ndarray]
 
 def polynomial_stochastic_gradient_descent(dots: np.ndarray, batch_size: int, start_value: np.ndarray,
                                            learning_rate: float,
-                                           l1: float = 0, l2: float = 0, elastic: float = 0):
+                                           l1: float = 0, l2: float = 0, elastic: float = 0, epoch_limit=2000):
     way = [start_value]
     n = len(start_value)
     dots_i = list(range(len(dots)))
     prev_args = start_value
 
     converges = False
-    for epoch in range(2000):
+    for epoch in range(epoch_limit):
         if converges:
             break
         shuffle(dots_i)
